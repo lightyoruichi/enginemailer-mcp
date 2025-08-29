@@ -14,6 +14,28 @@ const ENGINEMAILER_TX_EXPORT_PATH = process.env.ENGINEMAILER_TX_EXPORT_PATH || "
 const ENGINEMAILER_TX_CHECK_EXPORT_PATH = process.env.ENGINEMAILER_TX_CHECK_EXPORT_PATH || "/RESTAPI/V2/Submission/Report/CheckExport";
 const ENGINEMAILER_BATCH_STATUS_PATH = process.env.ENGINEMAILER_BATCH_STATUS_PATH || "/subscriber/emsubscriber/batchUpdateStatus";
 const DEFAULT_TIMEOUT_MS = Number(process.env.HTTP_TIMEOUT_MS || 30000);
+// Campaign paths (REST API)
+const ENGINEMAILER_CAMPAIGN_CREATE_PATH = process.env.ENGINEMAILER_CAMPAIGN_CREATE_PATH || "/Campaign/EMCampaign/CreateCampaign";
+const ENGINEMAILER_CAMPAIGN_UPDATE_PATH = process.env.ENGINEMAILER_CAMPAIGN_UPDATE_PATH || "/Campaign/EMCampaign/UpdateCampaign";
+const ENGINEMAILER_CAMPAIGN_DELETE_PATH = process.env.ENGINEMAILER_CAMPAIGN_DELETE_PATH || "/campaign/emcampaign/deletecampaign";
+const ENGINEMAILER_CAMPAIGN_ASSIGN_RECIPIENTS_PATH = process.env.ENGINEMAILER_CAMPAIGN_ASSIGN_RECIPIENTS_PATH || "/campaign/emcampaign/AssignRecipientList";
+const ENGINEMAILER_CAMPAIGN_DELETE_RECIPIENTS_PATH = process.env.ENGINEMAILER_CAMPAIGN_DELETE_RECIPIENTS_PATH || "/campaign/emcampaign/deleteRecipientList";
+const ENGINEMAILER_CAMPAIGN_PAUSE_PATH = process.env.ENGINEMAILER_CAMPAIGN_PAUSE_PATH || "/campaign/emcampaign/PauseCampaign";
+const ENGINEMAILER_CAMPAIGN_SEND_PATH = process.env.ENGINEMAILER_CAMPAIGN_SEND_PATH || "/campaign/emcampaign/SendCampaign";
+const ENGINEMAILER_CAMPAIGN_SCHEDULE_PATH = process.env.ENGINEMAILER_CAMPAIGN_SCHEDULE_PATH || "/campaign/emcampaign/ScheduleCampaign";
+const ENGINEMAILER_CAMPAIGN_LIST_PATH = process.env.ENGINEMAILER_CAMPAIGN_LIST_PATH || "/campaign/emcampaign/ListCampaign";
+// Campaign analytics (env-configurable, no defaults in docs)
+const ENGINEMAILER_CAMPAIGN_ANALYTICS_SUMMARY_PATH = process.env.ENGINEMAILER_CAMPAIGN_ANALYTICS_SUMMARY_PATH || "";
+const ENGINEMAILER_CAMPAIGN_ANALYTICS_DELIVERY_PATH = process.env.ENGINEMAILER_CAMPAIGN_ANALYTICS_DELIVERY_PATH || "";
+// Subscriber paths
+const ENGINEMAILER_SUBSCRIBER_GET_PATH = process.env.ENGINEMAILER_SUBSCRIBER_GET_PATH || "/subscriber/emsubscriber/getSubscriber";
+const ENGINEMAILER_SUBSCRIBER_INSERT_PATH = process.env.ENGINEMAILER_SUBSCRIBER_INSERT_PATH || "/subscriber/emsubscriber/insertSubscriber";
+const ENGINEMAILER_SUBSCRIBER_UPDATE_PATH = process.env.ENGINEMAILER_SUBSCRIBER_UPDATE_PATH || "/subscriber/emsubscriber/updateSubscriber";
+const ENGINEMAILER_SUBSCRIBER_UNSUB_PATH = process.env.ENGINEMAILER_SUBSCRIBER_UNSUB_PATH || "/subscriber/emsubscriber/unSubSubscriber";
+const ENGINEMAILER_SUBSCRIBER_ACTIVATE_PATH = process.env.ENGINEMAILER_SUBSCRIBER_ACTIVATE_PATH || "/subscriber/emsubscriber/activateSubscriber";
+const ENGINEMAILER_SUBSCRIBER_GET_CUSTOM_FIELD_PATH = process.env.ENGINEMAILER_SUBSCRIBER_GET_CUSTOM_FIELD_PATH || "/subscriber/emsubscriber/getCustomField";
+const ENGINEMAILER_SUBSCRIBER_GET_SUBCATEGORY_PATH = process.env.ENGINEMAILER_SUBSCRIBER_GET_SUBCATEGORY_PATH || "/subscriber/emsubscriber/getSubcategory";
+const ENGINEMAILER_SUBSCRIBER_UPDATE_CATEGORY_PATH = process.env.ENGINEMAILER_SUBSCRIBER_UPDATE_CATEGORY_PATH || "/subscriber/emsubscriber/updateCategory";
 // Basic HTTP wrapper using fetch (Node18+)
 async function httpPostJson(url, body, extraHeaders, timeoutMs = DEFAULT_TIMEOUT_MS) {
     const headers = {
@@ -226,6 +248,265 @@ server.tool("tx_check_export_status_v2", "Check transactional export status (V2)
     const status = data?.Status || r?.Status || "";
     const urlOut = data?.URL;
     return { content: [{ type: "text", text: `Status=${status}${urlOut ? ` URL=${urlOut}` : ""}` }] };
+});
+// Campaign CRUD tools
+server.tool("campaign_create", "Create campaign", {
+    campaignName: z.string().min(1),
+    senderName: z.string().min(1),
+    senderEmail: z.string().email(),
+    subject: z.string().min(1),
+    content: z.string().min(1),
+}, async ({ campaignName, senderName, senderEmail, subject, content }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_CAMPAIGN_CREATE_PATH);
+    const res = await httpPostJson(url, { CampaignName: campaignName, SenderName: senderName, SenderEmail: senderEmail, Subject: subject, Content: content }, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_create error", res);
+        return { content: [{ type: "text", text: `Create failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode} CampaignID=${r?.CampaignID ?? ""}` }] };
+});
+server.tool("campaign_update", "Update campaign", {
+    campaignID: z.union([z.number(), z.string()]),
+    campaignName: z.string().min(1),
+    senderName: z.string().min(1),
+    senderEmail: z.string().email(),
+    subject: z.string().min(1),
+    content: z.string().min(1),
+}, async ({ campaignID, campaignName, senderName, senderEmail, subject, content }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_CAMPAIGN_UPDATE_PATH);
+    const res = await httpPostJson(url, { CampaignID: campaignID, CampaignName: campaignName, SenderName: senderName, SenderEmail: senderEmail, Subject: subject, Content: content }, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_update error", res);
+        return { content: [{ type: "text", text: `Update failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_delete", "Delete campaign", { campaignID: z.union([z.number(), z.string()]) }, async ({ campaignID }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_DELETE_PATH);
+    const url = base.includes("?") ? `${base}&campaignid=${campaignID}` : `${base}?campaignid=${campaignID}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_delete error", res);
+        return { content: [{ type: "text", text: `Delete failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_assign_recipients", "Assign recipient list to campaign", {
+    campaignID: z.union([z.string(), z.number()]),
+    filterBy: z.number().int().describe("1=All, 2=Filter by Category"),
+    categoryList: z.array(z.number().int()).optional(),
+    filterType: z.string().optional().describe("AND/OR when filterBy=2"),
+}, async ({ campaignID, filterBy, categoryList, filterType }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_CAMPAIGN_ASSIGN_RECIPIENTS_PATH);
+    const data = filterBy === 2 && categoryList?.length ? { CategoryList: categoryList, FilterType: filterType || "OR" } : undefined;
+    const res = await httpPostJson(url, { campaignid: campaignID, FilterBy: filterBy, ...(data ? { data } : {}) }, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_assign_recipients error", res);
+        return { content: [{ type: "text", text: `Assign failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_delete_recipient_list", "Delete recipient list from campaign", { campaignID: z.union([z.string(), z.number()]) }, async ({ campaignID }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_DELETE_RECIPIENTS_PATH);
+    const url = base.includes("?") ? `${base}&campaignid=${campaignID}` : `${base}?campaignid=${campaignID}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_delete_recipient_list error", res);
+        return { content: [{ type: "text", text: `Delete failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_pause", "Pause campaign", { campaignID: z.union([z.string(), z.number()]) }, async ({ campaignID }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_PAUSE_PATH);
+    const url = base.includes("?") ? `${base}&campaignid=${campaignID}` : `${base}?campaignid=${campaignID}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_pause error", res);
+        return { content: [{ type: "text", text: `Pause failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_send", "Send campaign", { campaignID: z.union([z.string(), z.number()]) }, async ({ campaignID }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_SEND_PATH);
+    const url = base.includes("?") ? `${base}&campaignid=${campaignID}` : `${base}?campaignid=${campaignID}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_send error", res);
+        return { content: [{ type: "text", text: `Send failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_schedule", "Schedule campaign", { campaignID: z.union([z.string(), z.number()]), scheduleTime: z.string().min(1).describe("Format ddMMyyyy hh:mmtt e.g. 01122018 12:15PM") }, async ({ campaignID, scheduleTime }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_SCHEDULE_PATH);
+    const url = `${base}?campaignid=${campaignID}&scheduletime=${encodeURIComponent(scheduleTime)}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_schedule error", res);
+        return { content: [{ type: "text", text: `Schedule failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("campaign_list", "List campaigns (env path)", { page: z.number().int().optional(), pageSize: z.number().int().optional() }, async ({ page, pageSize }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_LIST_PATH);
+    const url = `${base}${page ? `?page=${page}` : ""}${pageSize ? `${page ? "&" : "?"}pageSize=${pageSize}` : ""}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_list error", res);
+        return { content: [{ type: "text", text: `List failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
+});
+// Campaign analytics (env paths only)
+server.tool("campaign_analytics_summary", "Campaign analytics summary (env path)", { campaignID: z.union([z.string(), z.number()]) }, async ({ campaignID }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    if (!ENGINEMAILER_CAMPAIGN_ANALYTICS_SUMMARY_PATH)
+        return { content: [{ type: "text", text: "Analytics summary path not configured." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_ANALYTICS_SUMMARY_PATH);
+    const url = base.includes("?") ? `${base}&campaignid=${campaignID}` : `${base}?campaignid=${campaignID}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_analytics_summary error", res);
+        return { content: [{ type: "text", text: `Analytics failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
+});
+server.tool("campaign_analytics_delivery", "Campaign delivery stats (env path)", { campaignID: z.union([z.string(), z.number()]) }, async ({ campaignID }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    if (!ENGINEMAILER_CAMPAIGN_ANALYTICS_DELIVERY_PATH)
+        return { content: [{ type: "text", text: "Analytics delivery path not configured." }] };
+    const base = buildUrl(ENGINEMAILER_CAMPAIGN_ANALYTICS_DELIVERY_PATH);
+    const url = base.includes("?") ? `${base}&campaignid=${campaignID}` : `${base}?campaignid=${campaignID}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("campaign_analytics_delivery error", res);
+        return { content: [{ type: "text", text: `Analytics failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
+});
+// Subscriber management tools
+server.tool("subscriber_get", "Get subscriber", { email: z.string().email() }, async ({ email }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_SUBSCRIBER_GET_PATH);
+    const url = base.includes("?") ? `${base}&email=${encodeURIComponent(email)}` : `${base}?email=${encodeURIComponent(email)}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_get error", res);
+        return { content: [{ type: "text", text: `Get failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
+});
+server.tool("subscriber_insert", "Insert subscriber", { email: z.string().email(), subcategories: z.array(z.number().int()).optional(), customfields: z.array(z.object({ customfield_key: z.string(), customfield_value: z.string() })).optional(), sourceType: z.string().optional() }, async ({ email, subcategories, customfields, sourceType }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_SUBSCRIBER_INSERT_PATH);
+    const res = await httpPostJson(url, { email, ...(subcategories ? { subcategories } : {}), ...(customfields ? { customfields } : {}), ...(sourceType ? { sourcetype: sourceType } : {}) }, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_insert error", res);
+        return { content: [{ type: "text", text: `Insert failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("subscriber_update", "Update subscriber", { email: z.string().email(), subcategories: z.array(z.number().int()).optional(), subcategories_type: z.number().int().optional(), customfields: z.array(z.object({ customfield_key: z.string(), customfield_value: z.string() })).optional(), customfield_type: z.number().int().optional() }, async ({ email, subcategories, subcategories_type, customfields, customfield_type }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_SUBSCRIBER_UPDATE_PATH);
+    const res = await httpPostJson(url, { email, ...(subcategories ? { subcategories } : {}), ...(typeof subcategories_type === "number" ? { subcategories_type } : {}), ...(customfields ? { customfields } : {}), ...(typeof customfield_type === "number" ? { customfield_type } : {}), }, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_update error", res);
+        return { content: [{ type: "text", text: `Update failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("subscriber_unsub", "Unsubscribe subscriber", { email: z.string().email() }, async ({ email }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_SUBSCRIBER_UNSUB_PATH);
+    const url = base.includes("?") ? `${base}&email=${encodeURIComponent(email)}` : `${base}?email=${encodeURIComponent(email)}`;
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_unsub error", res);
+        return { content: [{ type: "text", text: `Unsub failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("subscriber_activate", "Activate subscriber", { email: z.string().email() }, async ({ email }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const base = buildUrl(ENGINEMAILER_SUBSCRIBER_ACTIVATE_PATH);
+    const url = base.includes("?") ? `${base}&email=${encodeURIComponent(email)}` : `${base}?email=${encodeURIComponent(email)}`;
+    const res = await httpPostJson(url, {}, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_activate error", res);
+        return { content: [{ type: "text", text: `Activate failed (status ${res.status}). See logs.` }] };
+    }
+    const r = res.data?.Result;
+    return { content: [{ type: "text", text: `Status=${r?.Status} Code=${r?.StatusCode}` }] };
+});
+server.tool("subscriber_get_custom_field", "Get custom fields", {}, async () => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_SUBSCRIBER_GET_CUSTOM_FIELD_PATH);
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_get_custom_field error", res);
+        return { content: [{ type: "text", text: `Get failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
+});
+server.tool("subscriber_get_subcategory", "Get subcategory list", {}, async () => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_SUBSCRIBER_GET_SUBCATEGORY_PATH);
+    const res = await httpGetJson(url, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_get_subcategory error", res);
+        return { content: [{ type: "text", text: `Get failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
+});
+server.tool("subscriber_update_category", "Create/update category and subcategories", { categoryID: z.number().int().default(0), categoryName: z.string().min(1), description: z.string().optional(), isvisible: z.boolean().optional(), subcategories: z.array(z.object({ subcategoryID: z.number().int().default(0), subcategoryName: z.string().min(1), description: z.string().optional() })).optional() }, async ({ categoryID, categoryName, description, isvisible, subcategories }) => {
+    if (!ENGINEMAILER_API_KEY)
+        return { content: [{ type: "text", text: "ENGINEMAILER_API_KEY is not set." }] };
+    const url = buildUrl(ENGINEMAILER_SUBSCRIBER_UPDATE_CATEGORY_PATH);
+    const payload = { categoryID, categoryname: categoryName, ...(description ? { description } : {}), ...(typeof isvisible === "boolean" ? { isvisible } : {}), ...(subcategories ? { subcategories: subcategories.map(s => ({ subcategoryid: s.subcategoryID, subcategoryname: s.subcategoryName, ...(s.description ? { description: s.description } : {}) })) } : {}) };
+    const res = await httpPostJson(url, payload, { APIKey: ENGINEMAILER_API_KEY });
+    if (!res.ok) {
+        console.error("subscriber_update_category error", res);
+        return { content: [{ type: "text", text: `Update failed (status ${res.status}). See logs.` }] };
+    }
+    return { content: [{ type: "text", text: JSON.stringify(res.data) }] };
 });
 // Tool: batch_update_status
 server.tool("batch_update_status", "Check batch update subscribers job status", {

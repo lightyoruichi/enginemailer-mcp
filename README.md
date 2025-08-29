@@ -10,6 +10,9 @@ An MCP server that exposes Enginemailer tools to clients like Claude for Desktop
 - `tx_check_export_status_v2`: Checks status/URL for a report export job.
 - `batch_update_subscribers`: Batch insert/update subscribers.
 - `batch_update_status`: Check status for a subscribers batch job.
+- `campaign_create`, `campaign_update`, `campaign_delete`, `campaign_assign_recipients`, `campaign_delete_recipient_list`, `campaign_pause`, `campaign_send`, `campaign_schedule`, `campaign_list`
+- `campaign_analytics_summary`, `campaign_analytics_delivery` (paths must be configured via env)
+- `subscriber_get`, `subscriber_insert`, `subscriber_update`, `subscriber_unsub`, `subscriber_activate`, `subscriber_get_custom_field`, `subscriber_get_subcategory`, `subscriber_update_category`
 
 ## Requirements
 - Node.js 18+
@@ -32,6 +35,50 @@ Set environment variables in your host configuration:
 - `ENGINEMAILER_BATCH_UPDATE_PATH` (default: `/subscriber/emsubscriber/batchUpdateSubscribers`)
 - `ENGINEMAILER_BATCH_STATUS_PATH` (default: `/subscriber/emsubscriber/batchUpdateStatus`)
 - `HTTP_TIMEOUT_MS` (default: `30000`)
+- Campaign envs: `ENGINEMAILER_CAMPAIGN_CREATE_PATH`, `ENGINEMAILER_CAMPAIGN_UPDATE_PATH`, `ENGINEMAILER_CAMPAIGN_DELETE_PATH`, `ENGINEMAILER_CAMPAIGN_ASSIGN_RECIPIENTS_PATH`, `ENGINEMAILER_CAMPAIGN_DELETE_RECIPIENTS_PATH`, `ENGINEMAILER_CAMPAIGN_PAUSE_PATH`, `ENGINEMAILER_CAMPAIGN_SEND_PATH`, `ENGINEMAILER_CAMPAIGN_SCHEDULE_PATH`, `ENGINEMAILER_CAMPAIGN_LIST_PATH`
+- Analytics envs: `ENGINEMAILER_CAMPAIGN_ANALYTICS_SUMMARY_PATH`, `ENGINEMAILER_CAMPAIGN_ANALYTICS_DELIVERY_PATH`
+- Subscriber envs: `ENGINEMAILER_SUBSCRIBER_GET_PATH`, `ENGINEMAILER_SUBSCRIBER_INSERT_PATH`, `ENGINEMAILER_SUBSCRIBER_UPDATE_PATH`, `ENGINEMAILER_SUBSCRIBER_UNSUB_PATH`, `ENGINEMAILER_SUBSCRIBER_ACTIVATE_PATH`, `ENGINEMAILER_SUBSCRIBER_GET_CUSTOM_FIELD_PATH`, `ENGINEMAILER_SUBSCRIBER_GET_SUBCATEGORY_PATH`, `ENGINEMAILER_SUBSCRIBER_UPDATE_CATEGORY_PATH`
+- `campaign_create` example:
+```json
+{
+  "campaignName": "hello world",
+  "senderName": "support",
+  "senderEmail": "support@enginemailer.com",
+  "subject": "Promotion 1",
+  "content": "<b>This is my content</b>"
+}
+```
+
+- `campaign_assign_recipients` example:
+```json
+{
+  "campaignID": 2200,
+  "filterBy": 2,
+  "categoryList": [1,2,3],
+  "filterType": "OR"
+}
+```
+
+- `campaign_schedule` example:
+```json
+{
+  "campaignID": 2200,
+  "scheduleTime": "01122018 12:15PM"
+}
+```
+
+- `subscriber_insert` example:
+```json
+{
+  "email": "example@enginemailer.com",
+  "subcategories": [1, 2],
+  "customfields": [
+    { "customfield_key": "branch", "customfield_value": "KL" },
+    { "customfield_key": "mobile", "customfield_value": "+60123456789" }
+  ],
+  "sourceType": "Signup from website"
+}
+```
 
 ## Claude for Desktop config
 Create or edit `~/Library/Application Support/Claude/claude_desktop_config.json` and add:
