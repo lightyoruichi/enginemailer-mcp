@@ -705,7 +705,15 @@ async function main() {
 	console.error("Enginemailer MCP server running on stdio");
 }
 
-main().catch((err) => {
-	console.error("Fatal error:", err);
-	process.exit(1);
-});
+// Export the run function for CLI usage
+export async function run() {
+	await main();
+}
+
+// Only run if this file is executed directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+	main().catch((err) => {
+		console.error("Fatal error:", err);
+		process.exit(1);
+	});
+}

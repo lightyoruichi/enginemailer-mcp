@@ -2,6 +2,20 @@
 
 An MCP server that provides access to Enginemailer's email marketing and transactional email capabilities.
 
+## Installation
+
+### Quick Start (Recommended)
+
+```bash
+npx @lightyoruichi/enginemailer-mcp
+```
+
+### With Environment Variables
+
+```bash
+ENGINEMAILER_API_KEY=your-api-key-here npx @lightyoruichi/enginemailer-mcp
+```
+
 ## Tools Available
 
 ### 📧 Transactional Emails
@@ -52,23 +66,18 @@ An MCP server that provides access to Enginemailer's email marketing and transac
 - "Schedule a campaign for next week"
 - "Get campaign analytics for campaign ID 123"
 
-## Setup
-
-1. Clone this repo
-2. `npm install && npm run build`
-3. Add to your MCP config with your Enginemailer API key
-
 ## MCP Configuration
 
-Add this to your MCP client configuration (e.g., `~/.cursor/mcp.json`):
+### For Cursor (`~/.cursor/mcp.json`)
 
 ```json
 {
   "mcpServers": {
     "enginemailer": {
-      "command": "node",
+      "command": "npx",
       "args": [
-        "/path/to/your/enginemailer-mcp/build/index.js"
+        "-y",
+        "@lightyoruichi/enginemailer-mcp"
       ],
       "env": {
         "ENGINEMAILER_API_KEY": "your-api-key-here",
@@ -86,7 +95,78 @@ Add this to your MCP client configuration (e.g., `~/.cursor/mcp.json`):
 }
 ```
 
-**Important**: Replace `/path/to/your/enginemailer-mcp` with the actual path to your cloned repository, and replace `your-api-key-here` with your actual Enginemailer API key.
+### For Claude Desktop (`~/Library/Application Support/Claude/claude_desktop_config.json`)
+
+```json
+{
+  "mcpServers": {
+    "enginemailer": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@lightyoruichi/enginemailer-mcp"
+      ],
+      "env": {
+        "ENGINEMAILER_API_KEY": "your-api-key-here",
+        "ENGINEMAILER_API_BASE": "https://api.enginemailer.com/restapi",
+        "ENGINEMAILER_HOST": "https://api.enginemailer.com",
+        "ENGINEMAILER_TX_SEND_PATH": "/RESTAPI/V2/Submission/SendEmail",
+        "ENGINEMAILER_TX_EXPORT_PATH": "/RESTAPI/V2/Submission/Report/Export",
+        "ENGINEMAILER_TX_CHECK_EXPORT_PATH": "/RESTAPI/V2/Submission/Report/CheckExport",
+        "ENGINEMAILER_BATCH_UPDATE_PATH": "/subscriber/emsubscriber/batchUpdateSubscribers",
+        "ENGINEMAILER_BATCH_STATUS_PATH": "/subscriber/emsubscriber/batchUpdateStatus",
+        "HTTP_TIMEOUT_MS": "30000"
+      }
+    }
+  }
+}
+```
+
+### For Other MCP Clients
+
+```json
+{
+  "mcpServers": {
+    "enginemailer": {
+      "command": "npx",
+      "args": ["-y", "@lightyoruichi/enginemailer-mcp"],
+      "env": {
+        "ENGINEMAILER_API_KEY": "your-api-key-here"
+      }
+    }
+  }
+}
+```
+
+## Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ENGINEMAILER_API_KEY` | Your Enginemailer API key | **Required** |
+| `ENGINEMAILER_API_BASE` | API base URL | `https://api.enginemailer.com/restapi` |
+| `ENGINEMAILER_HOST` | API host | `https://api.enginemailer.com` |
+| `ENGINEMAILER_TX_SEND_PATH` | Transactional send endpoint | `/RESTAPI/V2/Submission/SendEmail` |
+| `ENGINEMAILER_TX_EXPORT_PATH` | Export endpoint | `/RESTAPI/V2/Submission/Report/Export` |
+| `ENGINEMAILER_TX_CHECK_EXPORT_PATH` | Export status endpoint | `/RESTAPI/V2/Submission/Report/CheckExport` |
+| `ENGINEMAILER_BATCH_UPDATE_PATH` | Batch update endpoint | `/subscriber/emsubscriber/batchUpdateSubscribers` |
+| `ENGINEMAILER_BATCH_STATUS_PATH` | Batch status endpoint | `/subscriber/emsubscriber/batchUpdateStatus` |
+| `HTTP_TIMEOUT_MS` | HTTP timeout in milliseconds | `30000` |
+
+## CLI Usage
+
+```bash
+# Show help
+npx @lightyoruichi/enginemailer-mcp --help
+
+# Show version
+npx @lightyoruichi/enginemailer-mcp --version
+
+# Health check
+npx @lightyoruichi/enginemailer-mcp --health
+
+# Run with custom API base
+ENGINEMAILER_API_BASE=https://api.enginemailer.com/compass/restapi npx @lightyoruichi/enginemailer-mcp
+```
 
 ## Get Your API Key
 
@@ -98,4 +178,23 @@ Get your API key from: https://portal.enginemailer.com/Account/UserProfile
 - Node.js 18+
 - Enginemailer API key
 - Verified sender domain for transactional emails
-- **Paid account** required for campaign features
+- **Paid account** required for campaign features, but transactions email works ok.
+
+## Development
+
+If you want to contribute or run from source:
+
+```bash
+# Clone the repository
+git clone https://github.com/lightyoruichi/enginemailer-mcp.git
+cd enginemailer-mcp
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Run in development mode
+npm run dev
+```

@@ -1,28 +1,54 @@
 {
-  "name": "enginemailer-mcp",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "scripts": {
-    "build": "tsc && chmod 755 build/index.js",
-    "start": "node ./build/index.js"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "name": "@lightyoruichi/enginemailer-mcp",
+  "version": "0.1.0",
+  "description": "Enginemailer MCP server for sending emails and managing campaigns",
   "type": "module",
+  "bin": {
+    "enginemailer-mcp": "dist/cli.js"
+  },
+  "main": "dist/index.js",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && chmod +x dist/cli.js",
+    "dev": "tsx src/cli.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lightyoruichi/enginemailer-mcp.git"
+  },
+  "author": "Harinder Singh",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "enginemailer",
+    "email",
+    "campaign",
+    "model-context-protocol"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.17.4",
     "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^24.3.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.9.2"
-  },
-  "bin": {
-    "enginemailer-mcp": "./build/index.js"
-  },
-  "files": [
-    "build"
-  ]
+  }
 }
