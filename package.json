@@ -1,6 +1,6 @@
 {
   "name": "@lightyoruichi/enginemailer-mcp",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Enginemailer MCP server for sending emails and managing campaigns",
   "type": "module",
   "bin": {
