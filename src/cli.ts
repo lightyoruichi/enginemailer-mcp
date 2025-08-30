@@ -3,7 +3,7 @@ import { run } from "./index.js";
 
 const arg = process.argv[2];
 if (arg === "--version") {
-  console.log("0.1.2");
+  console.log("0.1.3");
   process.exit(0);
 }
 if (arg === "--help") {
